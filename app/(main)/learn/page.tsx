@@ -1,21 +1,22 @@
 import { redirect } from "next/navigation";
 
+import { FeedWrapper } from "@/components/feed-wrapper";
 import { Promo } from "@/components/promo";
 import { Quests } from "@/components/quests";
-import { FeedWrapper } from "@/components/feed-wrapper";
-import { UserProgress } from "@/components/user-progress";
 import { StickyWrapper } from "@/components/sticky-wrapper";
-import { lessons, units as unitsSchema } from "@/db/schema";
-import { 
-  getCourseProgress, 
-  getLessonPercentage, 
-  getUnits, 
+import { UserProgress } from "@/components/user-progress";
+import {
+  getCourseProgress,
+  getLessonPercentage,
+  getUnits,
   getUserProgress,
-  getUserSubscription
+  getUserSubscription,
 } from "@/db/queries";
+import { lessons, units as unitsSchema } from "@/db/schema";
 
-import { Unit } from "./unit";
+import mixpanel from "mixpanel-browser";
 import { Header } from "./header";
+import { Unit } from "./unit";
 
 const LearnPage = async () => {
   const userProgressData = getUserProgress();
@@ -39,6 +40,17 @@ const LearnPage = async () => {
   ]);
 
   if (!userProgress || !userProgress.activeCourse) {
+    // Newly registered user
+    try {
+      mixpanel.track("user_registers", {
+        registration_method: "email",
+        registration_time: new Date().toISOString(),
+        is_referred: false,
+      });
+    } catch (err) {
+      console.log(err);
+    }
+
     redirect("/courses");
   }
 
@@ -57,9 +69,7 @@ const LearnPage = async () => {
           points={userProgress.points}
           hasActiveSubscription={isPro}
         />
-        {!isPro && (
-          <Promo />
-        )}
+        {!isPro && <Promo />}
         <Quests points={userProgress.points} />
       </StickyWrapper>
       <FeedWrapper>
@@ -72,9 +82,13 @@ const LearnPage = async () => {
               description={unit.description}
               title={unit.title}
               lessons={unit.lessons}
-              activeLesson={courseProgress.activeLesson as typeof lessons.$inferSelect & {
-                unit: typeof unitsSchema.$inferSelect;
-              } | undefined}
+              activeLesson={
+                courseProgress.activeLesson as
+                  | (typeof lessons.$inferSelect & {
+                      unit: typeof unitsSchema.$inferSelect;
+                    })
+                  | undefined
+              }
               activeLessonPercentage={lessonPercentage}
             />
           </div>
@@ -83,5 +97,5 @@ const LearnPage = async () => {
     </div>
   );
 };
- 
+
 export default LearnPage;

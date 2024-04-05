@@ -1,16 +1,17 @@
 "use client";
 
-import { toast } from "sonner";
-import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { toast } from "sonner";
 
-import { courses, userProgress } from "@/db/schema";
 import { upsertUserProgress } from "@/actions/user-progress";
+import { courses, userProgress } from "@/db/schema";
 
+import mixpanel from "mixpanel-browser";
 import { Card } from "./card";
 
 type Props = {
-  courses: typeof courses.$inferSelect[];
+  courses: (typeof courses.$inferSelect)[];
   activeCourseId?: typeof userProgress.$inferSelect.activeCourseId;
 };
 
@@ -21,13 +22,17 @@ export const List = ({ courses, activeCourseId }: Props) => {
   const onClick = (id: number) => {
     if (pending) return;
 
+    mixpanel.track("user_selects_language", {
+      selected_language: "es",
+      time_spent_selecting: 40,
+    });
+
     if (id === activeCourseId) {
       return router.push("/learn");
     }
 
     startTransition(() => {
-      upsertUserProgress(id)  
-        .catch(() => toast.error("Something went wrong."));
+      upsertUserProgress(id).catch(() => toast.error("Something went wrong."));
     });
   };
 

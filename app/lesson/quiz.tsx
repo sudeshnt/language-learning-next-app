@@ -1,35 +1,38 @@
 "use client";
 
-import { toast } from "sonner";
 import Image from "next/image";
-import Confetti from "react-confetti";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useAudio, useWindowSize, useMount } from "react-use";
+import { useEffect, useState, useTransition } from "react";
+import Confetti from "react-confetti";
+import { useAudio, useMount, useWindowSize } from "react-use";
+import { toast } from "sonner";
 
-import { reduceHearts } from "@/actions/user-progress";
-import { useHeartsModal } from "@/store/use-hearts-modal";
-import { challengeOptions, challenges, userSubscription } from "@/db/schema";
-import { usePracticeModal } from "@/store/use-practice-modal";
 import { upsertChallengeProgress } from "@/actions/challenge-progress";
+import { reduceHearts } from "@/actions/user-progress";
+import { challengeOptions, challenges, userSubscription } from "@/db/schema";
+import { useHeartsModal } from "@/store/use-hearts-modal";
+import { usePracticeModal } from "@/store/use-practice-modal";
 
-import { Header } from "./header";
-import { Footer } from "./footer";
+import mixpanel from "mixpanel-browser";
 import { Challenge } from "./challenge";
-import { ResultCard } from "./result-card";
+import { Footer } from "./footer";
+import { Header } from "./header";
 import { QuestionBubble } from "./question-bubble";
+import { ResultCard } from "./result-card";
 
-type Props ={
+type Props = {
   initialPercentage: number;
   initialHearts: number;
   initialLessonId: number;
   initialLessonChallenges: (typeof challenges.$inferSelect & {
     completed: boolean;
-    challengeOptions: typeof challengeOptions.$inferSelect[];
+    challengeOptions: (typeof challengeOptions.$inferSelect)[];
   })[];
-  userSubscription: typeof userSubscription.$inferSelect & {
-    isActive: boolean;
-  } | null;
+  userSubscription:
+    | (typeof userSubscription.$inferSelect & {
+        isActive: boolean;
+      })
+    | null;
 };
 
 export const Quiz = ({
@@ -53,16 +56,10 @@ export const Quiz = ({
   const router = useRouter();
 
   const [finishAudio] = useAudio({ src: "/finish.mp3", autoPlay: true });
-  const [
-    correctAudio,
-    _c,
-    correctControls,
-  ] = useAudio({ src: "/correct.wav" });
-  const [
-    incorrectAudio,
-    _i,
-    incorrectControls,
-  ] = useAudio({ src: "/incorrect.wav" });
+  const [correctAudio, _c, correctControls] = useAudio({ src: "/correct.wav" });
+  const [incorrectAudio, _i, incorrectControls] = useAudio({
+    src: "/incorrect.wav",
+  });
   const [pending, startTransition] = useTransition();
 
   const [lessonId] = useState(initialLessonId);
@@ -72,7 +69,9 @@ export const Quiz = ({
   });
   const [challenges] = useState(initialLessonChallenges);
   const [activeIndex, setActiveIndex] = useState(() => {
-    const uncompletedIndex = challenges.findIndex((challenge) => !challenge.completed);
+    const uncompletedIndex = challenges.findIndex(
+      (challenge) => !challenge.completed
+    );
     return uncompletedIndex === -1 ? 0 : uncompletedIndex;
   });
 
@@ -132,7 +131,7 @@ export const Quiz = ({
               setHearts((prev) => Math.min(prev + 1, 5));
             }
           })
-          .catch(() => toast.error("Something went wrong. Please try again."))
+          .catch(() => toast.error("Something went wrong. Please try again."));
       });
     } else {
       startTransition(() => {
@@ -150,10 +149,28 @@ export const Quiz = ({
               setHearts((prev) => Math.max(prev - 1, 0));
             }
           })
-          .catch(() => toast.error("Something went wrong. Please try again."))
+          .catch(() => toast.error("Something went wrong. Please try again."));
       });
     }
   };
+
+  const onComplete = () => {
+    console.log("🚀 ~ onComplete ~ ", {
+      lesson_id: initialLessonId,
+      correct_answers: 3,
+      completion_time: 300,
+    });
+    mixpanel.track("lesson_completed", {
+      lesson_id: initialLessonId,
+      correct_answers: 3,
+      completion_time: 300,
+    });
+    router.push("/learn");
+  };
+
+  useEffect(() => {
+    mixpanel.init(process.env.NEXT_PUBLIC_MIXPANEL_PROJECT_TOKEN ?? "");
+  }, []);
 
   if (!challenge) {
     return (
@@ -185,28 +202,19 @@ export const Quiz = ({
             Great job! <br /> You&apos;ve completed the lesson.
           </h1>
           <div className="flex items-center gap-x-4 w-full">
-            <ResultCard
-              variant="points"
-              value={challenges.length * 10}
-            />
-            <ResultCard
-              variant="hearts"
-              value={hearts}
-            />
+            <ResultCard variant="points" value={challenges.length * 10} />
+            <ResultCard variant="hearts" value={hearts} />
           </div>
         </div>
-        <Footer
-          lessonId={lessonId}
-          status="completed"
-          onCheck={() => router.push("/learn")}
-        />
+        <Footer lessonId={lessonId} status="completed" onCheck={onComplete} />
       </>
     );
   }
 
-  const title = challenge.type === "ASSIST" 
-    ? "Select the correct meaning"
-    : challenge.question;
+  const title =
+    challenge.type === "ASSIST"
+      ? "Select the correct meaning"
+      : challenge.question;
 
   return (
     <>
