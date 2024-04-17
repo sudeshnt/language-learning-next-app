@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import {
   ClerkLoaded,
@@ -8,10 +10,30 @@ import {
   SignedOut,
 } from "@clerk/nextjs";
 import { Loader } from "lucide-react";
+import mixpanel from "mixpanel-browser";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect } from "react";
 
 export default function Home() {
+  const onPressGetStarted = () => {
+    try {
+      mixpanel.track("user_register", {
+        register_method: "Email",
+        is_referred: true,
+        user_name: "Sudesh Nimesha",
+        user_email: "sudesh@gmail.com",
+        register_time: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  useEffect(() => {
+    mixpanel.init(process.env.NEXT_PUBLIC_MIXPANEL_PROJECT_TOKEN ?? "");
+  }, []);
+
   return (
     <div className="max-w-[988px] mx-auto flex-1 w-full flex flex-col lg:flex-row items-center justify-center p-4 gap-2">
       <div className="relative w-[240px] h-[240px] lg:w-[424px] lg:h-[424px] mb-8 lg:mb-0">
@@ -32,7 +54,12 @@ export default function Home() {
                 afterSignInUrl="/learn"
                 afterSignUpUrl="/learn"
               >
-                <Button size="lg" variant="secondary" className="w-full">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={onPressGetStarted}
+                >
                   Get Started
                 </Button>
               </SignUpButton>

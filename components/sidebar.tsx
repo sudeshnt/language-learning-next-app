@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import mixpanel from "mixpanel-browser";
 import { useEffect } from "react";
 import { SidebarItem } from "./sidebar-item";
+import { Button } from "./ui/button";
 
 type Props = {
   className?: string;
@@ -22,6 +23,17 @@ export const Sidebar = ({ className }: Props) => {
         leaderboard_type: "global",
         view_time: new Date().toISOString(),
         current_rank: 5,
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const onPressLogout = () => {
+    try {
+      mixpanel.track("user_logout", {
+        logout_time: new Date().toISOString(),
+        time_active: 600,
       });
     } catch (err) {
       console.log(err);
@@ -58,13 +70,14 @@ export const Sidebar = ({ className }: Props) => {
         <SidebarItem label="quests" href="/quests" iconSrc="/quests.svg" />
         <SidebarItem label="shop" href="/shop" iconSrc="/shop.svg" />
       </div>
-      <div className="p-4">
+      <div className="p-4 flex flex-row justify-between">
         <ClerkLoading>
           <Loader className="h-5 w-5 text-muted-foreground animate-spin" />
         </ClerkLoading>
         <ClerkLoaded>
           <UserButton afterSignOutUrl="/" />
         </ClerkLoaded>
+        <Button onClick={onPressLogout}>Logout</Button>
       </div>
     </div>
   );

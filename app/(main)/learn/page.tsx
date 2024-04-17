@@ -14,7 +14,6 @@ import {
 } from "@/db/queries";
 import { lessons, units as unitsSchema } from "@/db/schema";
 
-import mixpanel from "mixpanel-browser";
 import { Header } from "./header";
 import { Unit } from "./unit";
 
@@ -40,17 +39,6 @@ const LearnPage = async () => {
   ]);
 
   if (!userProgress || !userProgress.activeCourse) {
-    // Newly registered user
-    try {
-      mixpanel.track("user_registers", {
-        registration_method: "email",
-        registration_time: new Date().toISOString(),
-        is_referred: false,
-      });
-    } catch (err) {
-      console.log(err);
-    }
-
     redirect("/courses");
   }
 
